@@ -1,0 +1,75 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import { CONTENT_KEY, DEFAULT_CONTENT, type SiteContent } from './content';
+import { REMOTE_ROW_ID, REMOTE_TABLE, supabase } from './lib/supabase';
+
+export function loadContent(): SiteContent {
+  if (typeof window === 'undefined') return DEFAULT_CONTENT;
+  try {
+    const raw = window.localStorage.getItem(CONTENT_KEY);
+    if (!raw) return DEFAULT_CONTENT;
+    return { ...DEFAULT_CONTENT, ...JSON.parse(raw) } as SiteContent;
+  } catch {
+    return DEFAULT_CONTENT;
+  }
+}
+
+async function loadRemote(): Promise<SiteContent | null> {
+  if (!supabase) return null;
+  try {
+    const { data } = await supabase
+      .from(REMOTE_TABLE)
+      .select('content')
+      .eq('id', REMOTE_ROW_ID)
+      .maybeSingle();
+    if (data?.content) {
+      return { ...DEFAULT_CONTENT, ...(data.content as Partial<SiteContent>) } as SiteContent;
+    }
+  } catch {
+    /* remote not reachable — fall back to local */
+  }
+  return null;
+}
+
+/** Local first, then Supabase if it's configured and reachable. */
+export async function loadContentAsync(): Promise<SiteContent> {
+  const local = loadContent();
+  const remote = await loadRemote();
+  return remote ?? local;
+}
+
+export async function saveContent(content: SiteContent) {
+  window.localStorage.setItem(CONTENT_KEY, JSON.stringify(content));
+  if (!supabase) return;
+  try {
+    await supabase
+      .from(REMOTE_TABLE)
+      .upsert(
+        { id: REMOTE_ROW_ID, content, updated_at: new Date().toISOString() },
+        { onConflict: 'id' }
+      );
+  } catch {
+    /* keep local copy as fallback */
+  }
+}
+
+export function clearContent() {
+  window.localStorage.removeItem(CONTENT_KEY);
+}
+
+export function useSiteContent() {
+  const [content, setContent] = useState<SiteContent>(DEFAULT_CONTENT);
+
+  useEffect(() => {
+    let active = true;
+    loadContentAsync().then((c) => {
+      if (active) setContent(c);
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  return { content };
+}

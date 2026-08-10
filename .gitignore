@@ -1,0 +1,22 @@
+node_modules
+.next
+out
+dist
+.DS_Store
+
+# env & secrets
+.env
+.env.local
+.env*.local
+
+# IDE
+.idea/
+.vscode/
+
+# build artifacts
+tsconfig.tsbuildinfo
+*.tsbuildinfo
+
+# QA screenshots & tooling
+/*.png
+.playwright-mcp/

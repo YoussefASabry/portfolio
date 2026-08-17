@@ -55,6 +55,11 @@
   transition: filter 0.2s;
 }
 .adm-add:hover, .adm-save:hover { filter: brightness(1.15); }
+.adm-save:disabled { opacity: 0.6; cursor: wait; }
+.adm-save-status { font-size: 12px; margin-left: 10px; font-weight: 500; white-space: nowrap; }
+.adm-save-status.ok { color: #22c55e; }
+.adm-save-status.local { color: #f59e0b; }
+.adm-save-status.err { color: #ff6b6b; }
 .adm-upload { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .adm-upload-btn {
   background: rgba(108,92,231,0.12); color: #a29bfe;

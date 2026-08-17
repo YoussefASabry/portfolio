@@ -423,7 +423,8 @@ export default function Admin() {
   });
   const [pass, setPass] = useState('');
   const [error, setError] = useState('');
-  const [saved, setSaved] = useState(false);
+  const [saved, setSaved] = useState<{ msg: string; type: 'ok' | 'local' | 'err' } | null>(null);
+  const [saving, setSaving] = useState(false);
   const [draft, setDraft] = useState<SiteContent>(() => {
     try {
       const raw = localStorage.getItem(CONTENT_KEY);
@@ -470,10 +471,18 @@ export default function Admin() {
     }
   };
 
-  const doSave = () => {
-    saveContent(draft);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+  const doSave = async () => {
+    setSaving(true);
+    const result = await saveContent(draft);
+    setSaving(false);
+    if (result.ok && !result.error) {
+      setSaved({ msg: 'Synced to database ✓', type: 'ok' });
+    } else if (result.ok && result.error) {
+      setSaved({ msg: 'Saved locally only', type: 'local' });
+    } else {
+      setSaved({ msg: 'DB error: ' + (result.error || 'Unknown'), type: 'err' });
+    }
+    setTimeout(() => setSaved(null), 5000);
   };
 
   const doReset = () => {
@@ -518,9 +527,10 @@ export default function Admin() {
           <button type="button" className="adm-reset" onClick={doReset}>
             Reset to defaults
           </button>
-          <button type="button" className="adm-save" onClick={doSave}>
-            {saved ? 'Saved ✓' : 'Save changes'}
+          <button type="button" className="adm-save" onClick={doSave} disabled={saving}>
+            {saving ? 'Saving…' : 'Save changes'}
           </button>
+          {saved && <span className={`adm-save-status ${saved.type}`}>{saved.msg}</span>}
         </div>
       </div>
       <p className="adm-note">
@@ -840,9 +850,10 @@ export default function Admin() {
         <button type="button" className="adm-reset" onClick={doReset}>
           Reset to defaults
         </button>
-        <button type="button" className="adm-save" onClick={doSave}>
-          {saved ? 'Saved ✓' : 'Save changes'}
+        <button type="button" className="adm-save" onClick={doSave} disabled={saving}>
+          {saving ? 'Saving…' : 'Save changes'}
         </button>
+        {saved && <span className={`adm-save-status ${saved.type}`}>{saved.msg}</span>}
       </div>
     </main>
   );

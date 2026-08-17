@@ -39,18 +39,20 @@ export async function loadContentAsync(): Promise<SiteContent> {
   return remote ?? local;
 }
 
-export async function saveContent(content: SiteContent) {
+export async function saveContent(content: SiteContent): Promise<{ ok: boolean; error?: string }> {
   window.localStorage.setItem(CONTENT_KEY, JSON.stringify(content));
-  if (!supabase) return;
+  if (!supabase) return { ok: true, error: 'No database configured — saved locally only' };
   try {
-    await supabase
+    const { error } = await supabase
       .from(REMOTE_TABLE)
       .upsert(
         { id: REMOTE_ROW_ID, content, updated_at: new Date().toISOString() },
         { onConflict: 'id' }
       );
-  } catch {
-    /* keep local copy as fallback */
+    if (error) return { ok: false, error: error.message };
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : 'Unknown error' };
   }
 }
 

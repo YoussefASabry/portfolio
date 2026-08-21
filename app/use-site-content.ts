@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { CONTENT_KEY, DEFAULT_CONTENT, type SiteContent } from './content';
-import { REMOTE_ROW_ID, REMOTE_TABLE, supabase } from './lib/supabase';
+import { REMOTE_ROW_ID, REMOTE_TABLE, supabase, supabaseEnabled } from './lib/supabase';
 
 export function loadContent(): SiteContent {
   if (typeof window === 'undefined') return DEFAULT_CONTENT;
@@ -16,18 +16,25 @@ export function loadContent(): SiteContent {
 }
 
 async function loadRemote(): Promise<SiteContent | null> {
-  if (!supabase) return null;
+  if (!supabase) {
+    console.warn('[CMS] supabase client unavailable:', { supabaseEnabled, type: typeof supabase });
+    return null;
+  }
   try {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from(REMOTE_TABLE)
       .select('content')
       .eq('id', REMOTE_ROW_ID)
       .maybeSingle();
+    if (error) {
+      console.error('[CMS] Supabase read error:', error.message);
+      return null;
+    }
     if (data?.content) {
       return { ...DEFAULT_CONTENT, ...(data.content as Partial<SiteContent>) } as SiteContent;
     }
-  } catch {
-    /* remote not reachable — fall back to local */
+  } catch (e) {
+    console.error('[CMS] loadRemote exception:', e);
   }
   return null;
 }
@@ -41,7 +48,7 @@ export async function loadContentAsync(): Promise<SiteContent> {
 
 export async function saveContent(content: SiteContent): Promise<{ ok: boolean; error?: string }> {
   window.localStorage.setItem(CONTENT_KEY, JSON.stringify(content));
-  if (!supabase) return { ok: true, error: 'No database configured — saved locally only' };
+  if (!supabase) return { ok: false, error: `Database not connected (supabaseEnabled=${supabaseEnabled}, supabase=${typeof supabase}) — saved locally only` };
   try {
     const { error } = await supabase
       .from(REMOTE_TABLE)

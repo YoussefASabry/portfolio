@@ -478,11 +478,11 @@ export default function Admin() {
     if (result.ok && !result.error) {
       setSaved({ msg: 'Synced to database ✓', type: 'ok' });
     } else if (result.ok && result.error) {
-      setSaved({ msg: 'Saved locally only', type: 'local' });
+      setSaved({ msg: result.error, type: 'local' });
     } else {
-      setSaved({ msg: 'DB error: ' + (result.error || 'Unknown'), type: 'err' });
+      setSaved({ msg: result.error || 'Unknown error', type: 'err' });
     }
-    setTimeout(() => setSaved(null), 5000);
+    setTimeout(() => setSaved(null), 8000);
   };
 
   const doReset = () => {
